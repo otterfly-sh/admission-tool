@@ -11,13 +11,15 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 h1{font-size:20px;font-weight:500;margin-bottom:1.5rem;color:#1a1a1a;}
 .card{background:#fff;border:0.5px solid rgba(0,0,0,0.12);border-radius:12px;padding:1.25rem;margin-bottom:1rem;}
 label{font-size:12px;color:#666;display:block;margin-bottom:4px;}
-input,select{width:100%;padding:7px 10px;font-size:14px;border:0.5px solid rgba(0,0,0,0.2);border-radius:8px;background:#fff;color:#1a1a1a;outline:none;}
-input:focus,select:focus{border-color:rgba(0,0,0,0.4);}
+input,select,textarea{width:100%;padding:7px 10px;font-size:14px;border:0.5px solid rgba(0,0,0,0.2);border-radius:8px;background:#fff;color:#1a1a1a;outline:none;}
+input:focus,select:focus,textarea:focus{border-color:rgba(0,0,0,0.4);}
 .btn{padding:8px 16px;border:0.5px solid rgba(0,0,0,0.2);border-radius:8px;background:transparent;color:#1a1a1a;cursor:pointer;font-size:13px;}
 .btn:hover{background:#f0f0ee;}
 .btn-primary{background:#1a1a1a;color:#fff;border-color:#1a1a1a;}
 .btn-primary:hover{opacity:0.85;}
 .btn-small{padding:4px 10px;font-size:12px;}
+.btn-danger{background:#fef2f2;color:#991b1b;border-color:#fca5a5;font-size:12px;padding:3px 8px;}
+.btn-danger:hover{background:#fee2e2;}
 .section-title{font-size:16px;font-weight:500;color:#1a1a1a;margin-bottom:1rem;}
 .tab-bar{display:flex;gap:4px;border-bottom:0.5px solid rgba(0,0,0,0.12);margin-bottom:1rem;flex-wrap:wrap;}
 .tab{padding:8px 14px;font-size:13px;cursor:pointer;border:none;background:none;color:#888;border-bottom:2px solid transparent;margin-bottom:-0.5px;}
@@ -52,6 +54,11 @@ input:focus,select:focus{border-color:rgba(0,0,0,0.4);}
 .autocomplete-item{padding:8px 12px;font-size:13px;cursor:pointer;color:#1a1a1a;}
 .autocomplete-item:hover,.autocomplete-item.selected{background:#f0f0ee;}
 .autocomplete-item .rank{color:#aaa;font-size:11px;margin-right:6px;}
+.submitted-item{display:flex;justify-content:space-between;align-items:center;padding:8px 12px;border-bottom:0.5px solid rgba(0,0,0,0.06);font-size:13px;}
+.submitted-item:last-child{border-bottom:none;}
+.src-btn{flex:1;padding:8px;font-size:13px;border:0.5px solid rgba(0,0,0,0.2);border-radius:8px;background:transparent;color:#1a1a1a;cursor:pointer;text-align:center;}
+.src-btn:hover{background:#f0f0ee;}
+.src-btn.active{background:#1a1a1a;color:#fff;border-color:#1a1a1a;}
 </style>
 </head>
 <body>
@@ -105,17 +112,31 @@ input:focus,select:focus{border-color:rgba(0,0,0,0.4);}
         <div id="submit-status"></div>
       </div>
     </div>
+    <div id="submitted-list" class="card hidden">
+      <div style="font-size:13px;font-weight:500;margin-bottom:8px;color:#666">剛才送出的資料（如有錯誤可立即刪除）</div>
+      <div id="submitted-items"></div>
+    </div>
   </div>
 </div>
 
 <!-- 榜單模式 -->
 <div id="report-mode" class="hidden">
   <div class="card">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;">
-      <div class="section-title" style="margin:0">讀取最新資料</div>
-      <button class="btn btn-primary" onclick="loadReportData()">讀取 Google Sheet</button>
+    <div class="section-title">資料來源</div>
+    <div style="display:flex;gap:8px;margin-bottom:1rem;">
+      <button class="src-btn active" id="src-sheet-btn" onclick="switchSource('sheet')">從 Google Sheet 讀取</button>
+      <button class="src-btn" id="src-paste-btn" onclick="switchSource('paste')">手動貼上資料</button>
     </div>
-    <div id="report-status" style="font-size:13px;color:#888">按右上角按鈕讀取最新資料</div>
+    <div id="src-sheet">
+      <button class="btn btn-primary" onclick="loadReportData()" style="width:100%">讀取 Google Sheet</button>
+      <div id="report-status" style="font-size:13px;color:#888;margin-top:8px;">按上方按鈕讀取最新資料</div>
+    </div>
+    <div id="src-paste" class="hidden">
+      <p style="font-size:12px;color:#888;margin-bottom:8px;">從 Google Sheet 的「錄取資料」分頁，全選複製（含第一行標題）後貼到下方</p>
+      <textarea id="paste-area" rows="8" style="font-family:monospace;resize:vertical;" placeholder="學生姓名	學校	獎學金	填入時間	填入者"></textarea>
+      <button class="btn btn-primary" onclick="loadPastedData()" style="margin-top:8px;width:100%">產出榜單</button>
+      <div id="paste-status" style="font-size:13px;color:#888;margin-top:8px;"></div>
+    </div>
   </div>
   <div id="output-section" class="hidden">
     <div class="tab-bar">
@@ -151,7 +172,7 @@ input:focus,select:focus{border-color:rgba(0,0,0,0.4);}
         <span style="font-size:12px;color:#888">學生榜單（簡稱＋分欄）</span>
         <button class="btn btn-small" onclick="copyTable(3)">複製</button>
       </div>
-      <div style="font-size:12px;color:#888;margin-bottom:8px;">每間學校各佔一欄，複製後可直接貼到 Excel 或 Google Sheet</div>
+      <p style="font-size:12px;color:#888;margin-bottom:8px;">每間學校各佔一欄，複製後可直接貼到 Excel 或 Google Sheet</p>
       <table class="output-table" id="table-3" style="table-layout:auto;"></table>
     </div>
     <div id="tab-4" class="card hidden">
@@ -166,11 +187,12 @@ input:focus,select:focus{border-color:rgba(0,0,0,0.4);}
 </div>
 
 <script>
-const API_URL='https://script.google.com/macros/s/AKfycbz53VYZfUfU-U25gdbhm_qfg7QCc2mxa4G8uWvoe4VGDh-CRsGpek95LFCA3NVGyA/exec';
+const API_URL='https://script.google.com/macros/s/AKfycbwVXmQfVtLi-nqBy45OHnZwhM0syJGJIP-a-jV5regFQRrzEqwB9wuoG_MocM9fEA/exec';
 let students=[];
 let schools=[];
 let abbreviations={};
 let schoolRowCount=0;
+let submittedEntries=[];
 
 async function init(){
   try{
@@ -205,14 +227,20 @@ function onStudentSelect(){
   document.getElementById('student-info').classList.remove('hidden');
 }
 
+function buildSchoolSelect(){
+  const sel=document.createElement('select');
+  const d=document.createElement('option');d.value='';d.textContent='選擇學校...';sel.appendChild(d);
+  schools.forEach(s=>{const o=document.createElement('option');o.value=s.name;o.textContent=s.rank?`#${s.rank} ${s.name}`:s.name;sel.appendChild(o);});
+  const c=document.createElement('option');c.value='__custom__';c.textContent='其他（手動輸入）';sel.appendChild(c);
+  return sel;
+}
+
 function addSchoolRow(){
   schoolRowCount++;
   const id=schoolRowCount;
   const container=document.getElementById('schools-container');
   const row=document.createElement('div');
   row.className='school-row';row.id=`srow-${id}`;
-
-  // Autocomplete school input
   const schoolWrap=document.createElement('div');
   schoolWrap.innerHTML='<label>學校</label>';
   const acWrap=document.createElement('div');
@@ -227,7 +255,6 @@ function addSchoolRow(){
   acList.id=`slist-${id}`;
   let selectedSchool='';
   let activeIdx=-1;
-
   acInput.addEventListener('input',()=>{
     const q=acInput.value.trim().toLowerCase();
     selectedSchool='';
@@ -237,22 +264,16 @@ function addSchoolRow(){
       (abbreviations[s.name]&&abbreviations[s.name].toLowerCase().includes(q))
     ).slice(0,8);
     if(!matches.length){acList.classList.add('hidden');return;}
-    acList.innerHTML='';
-    activeIdx=-1;
-    matches.forEach((s,i)=>{
+    acList.innerHTML='';activeIdx=-1;
+    matches.forEach((s)=>{
       const item=document.createElement('div');
       item.className='autocomplete-item';
       item.innerHTML=`<span class="rank">${s.rank?'#'+s.rank:''}</span>${s.name}${abbreviations[s.name]?' ('+abbreviations[s.name]+')':''}`;
-      item.addEventListener('mousedown',()=>{
-        acInput.value=s.name;
-        selectedSchool=s.name;
-        acList.classList.add('hidden');
-      });
+      item.addEventListener('mousedown',()=>{acInput.value=s.name;selectedSchool=s.name;acList.classList.add('hidden');});
       acList.appendChild(item);
     });
     acList.classList.remove('hidden');
   });
-
   acInput.addEventListener('keydown',e=>{
     const items=acList.querySelectorAll('.autocomplete-item');
     if(e.key==='ArrowDown'){e.preventDefault();activeIdx=Math.min(activeIdx+1,items.length-1);items.forEach((el,i)=>el.classList.toggle('selected',i===activeIdx));}
@@ -260,29 +281,20 @@ function addSchoolRow(){
     else if(e.key==='Enter'&&activeIdx>=0){items[activeIdx].dispatchEvent(new Event('mousedown'));}
     else if(e.key==='Escape'){acList.classList.add('hidden');}
   });
-
   acInput.addEventListener('blur',()=>{setTimeout(()=>acList.classList.add('hidden'),150);});
   acInput.addEventListener('focus',()=>{if(acInput.value.trim())acInput.dispatchEvent(new Event('input'));});
-
-  acWrap.appendChild(acInput);
-  acWrap.appendChild(acList);
+  acWrap.appendChild(acInput);acWrap.appendChild(acList);
   schoolWrap.appendChild(acWrap);
-  schoolWrap.dataset.getSchool=id;
-
   const scholarWrap=document.createElement('div');
   scholarWrap.innerHTML='<label>獎學金（選填）</label>';
   const scholarInput=document.createElement('input');
   scholarInput.placeholder='例：$5k/y';scholarInput.id=`sscholar-${id}`;
   scholarWrap.appendChild(scholarInput);
-
   const removeBtn=document.createElement('button');
   removeBtn.className='remove-btn';removeBtn.textContent='×';
   removeBtn.onclick=()=>row.remove();
-
   row.appendChild(schoolWrap);row.appendChild(scholarWrap);row.appendChild(removeBtn);
   container.appendChild(row);
-
-  // Store reference to selectedSchool via closure
   row._getSchoolName=()=>selectedSchool||acInput.value.trim();
 }
 
@@ -301,12 +313,18 @@ async function submitEntries(){
   });
   if(!entries.length){setStatus('submit-status','請至少填入一間學校','err');return;}
   setStatus('submit-status','送出中...','loading');
+  const sentEntries=[];
   let ok=0;
   for(const entry of entries){
-    try{await fetch(API_URL,{method:'POST',body:JSON.stringify(entry)});ok++;}catch(e){}
+    try{
+      const res=await fetch(API_URL,{method:'POST',body:JSON.stringify(entry)});
+      const json=await res.json();
+      if(json.status==='ok'){ok++;sentEntries.push(entry);}
+    }catch(e){}
   }
   if(ok===entries.length){
     setStatus('submit-status',`已成功送出 ${ok} 筆資料`,'ok');
+    showSubmitted(sentEntries);
     document.getElementById('schools-container').innerHTML='';
     document.getElementById('student-sel').value='';
     document.getElementById('filled-by').value='';
@@ -314,6 +332,41 @@ async function submitEntries(){
     schoolRowCount=0;addSchoolRow();
   }else{
     setStatus('submit-status','部分資料送出失敗，請再試一次','err');
+  }
+}
+
+function showSubmitted(entries){
+  submittedEntries=[...submittedEntries,...entries];
+  renderSubmitted();
+  document.getElementById('submitted-list').classList.remove('hidden');
+}
+
+function renderSubmitted(){
+  const container=document.getElementById('submitted-items');
+  container.innerHTML='';
+  submittedEntries.forEach((entry,idx)=>{
+    const div=document.createElement('div');
+    div.className='submitted-item';
+    div.innerHTML=`<span><strong>${entry.studentName}</strong> → ${entry.schoolName}${entry.scholarship?' ('+entry.scholarship+')':''}<span style="color:#aaa;font-size:11px;margin-left:8px">${entry.filledBy}</span></span>`;
+    const delBtn=document.createElement('button');
+    delBtn.className='btn btn-danger';
+    delBtn.textContent='刪除';
+    delBtn.onclick=()=>deleteEntry(idx);
+    div.appendChild(delBtn);
+    container.appendChild(div);
+  });
+}
+
+async function deleteEntry(idx){
+  const entry=submittedEntries[idx];
+  try{
+    await fetch(API_URL,{method:'POST',body:JSON.stringify({...entry,_action:'delete'})});
+  }catch(e){}
+  submittedEntries.splice(idx,1);
+  if(submittedEntries.length===0){
+    document.getElementById('submitted-list').classList.add('hidden');
+  }else{
+    renderSubmitted();
   }
 }
 
@@ -326,6 +379,13 @@ function switchMode(mode){
   document.getElementById('report-mode').classList.toggle('hidden',mode!=='report');
   document.getElementById('mode-input').classList.toggle('active',mode==='input');
   document.getElementById('mode-report').classList.toggle('active',mode==='report');
+}
+
+function switchSource(src){
+  document.getElementById('src-sheet').classList.toggle('hidden',src!=='sheet');
+  document.getElementById('src-paste').classList.toggle('hidden',src!=='paste');
+  document.getElementById('src-sheet-btn').classList.toggle('active',src==='sheet');
+  document.getElementById('src-paste-btn').classList.toggle('active',src==='paste');
 }
 
 async function loadReportData(){
@@ -350,6 +410,27 @@ async function loadReportData(){
   }
 }
 
+function loadPastedData(){
+  const text=document.getElementById('paste-area').value.trim();
+  if(!text){setStatus('paste-status','請先貼上資料','err');return;}
+  const lines=text.split(/\r?\n/).filter(l=>l.trim());
+  if(lines.length<2){setStatus('paste-status','資料不足，請確認格式','err');return;}
+  const headers=lines[0].split('\t').map(h=>h.trim());
+  const nameIdx=headers.findIndex(h=>/學生姓名/i.test(h));
+  const schoolIdx=headers.findIndex(h=>/^學校$/i.test(h));
+  const scholarIdx=headers.findIndex(h=>/獎學金/i.test(h));
+  if(nameIdx<0||schoolIdx<0){setStatus('paste-status','找不到「學生姓名」或「學校」欄位，請確認第一行是標題行','err');return;}
+  const data=lines.slice(1).map(line=>{
+    const cols=line.split('\t');
+    const obj={};
+    headers.forEach((h,i)=>obj[h]=cols[i]?cols[i].trim():'');
+    return obj;
+  }).filter(r=>r['學生姓名']&&r['學校']);
+  if(!data.length){setStatus('paste-status','沒有找到有效資料','err');return;}
+  buildReports(data);
+  setStatus('paste-status',`已載入 ${data.length} 筆資料`,'ok');
+}
+
 function getAbbr(name){return abbreviations[name]||name;}
 function getRank(name){const f=schools.find(s=>s.name===name);return f?f.rank:null;}
 
@@ -363,14 +444,12 @@ function buildReports(data){
   });
   const studentList=Object.entries(studentMap).map(([name,schools])=>({name,schools}));
 
-  // Table 0: simple
   const t0=document.getElementById('table-0');
   t0.innerHTML='<thead><tr><th style="width:120px">學生</th><th style="width:50px">數量</th><th>錄取學校</th></tr></thead>';
   const tb0=document.createElement('tbody');
   studentList.forEach(s=>{const tr=document.createElement('tr');tr.innerHTML=`<td style="font-weight:500">${s.name}</td><td><span class="count-badge">${s.schools.length}</span></td><td>${s.schools.map(sc=>sc.name).join('、')}</td>`;tb0.appendChild(tr);});
   t0.appendChild(tb0);
 
-  // Table 1: with scholarship
   const t1=document.getElementById('table-1');
   t1.innerHTML='<thead><tr><th style="width:120px">學生</th><th style="width:50px">數量</th><th>錄取學校（含獎學金）</th></tr></thead>';
   const tb1=document.createElement('tbody');
@@ -380,7 +459,6 @@ function buildReports(data){
   });
   t1.appendChild(tb1);
 
-  // Table 2: abbreviated + scholarship
   const t2=document.getElementById('table-2');
   t2.innerHTML='<thead><tr><th style="width:120px">學生</th><th style="width:50px">數量</th><th>錄取學校（簡稱＋獎學金）</th></tr></thead>';
   const tb2=document.createElement('tbody');
@@ -390,7 +468,6 @@ function buildReports(data){
   });
   t2.appendChild(tb2);
 
-  // Table 3: abbreviated columns format
   const maxSchools=Math.max(...studentList.map(s=>s.schools.length));
   const t3=document.getElementById('table-3');
   let t3head='<thead><tr><th style="min-width:100px">學生</th><th style="min-width:40px">數量</th>';
@@ -403,25 +480,17 @@ function buildReports(data){
     let cells=`<td style="font-weight:500">${s.name}</td><td><span class="count-badge">${s.schools.length}</span></td>`;
     for(let i=0;i<maxSchools;i++){
       const sc=s.schools[i];
-      if(sc){
-        let txt=getAbbr(sc.name);
-        if(sc.scholarship)txt+=` <span class="scholarship-tag">${sc.scholarship}</span>`;
-        cells+=`<td>${txt}</td>`;
-      } else {
-        cells+=`<td style="color:#ddd">—</td>`;
-      }
+      if(sc){let txt=getAbbr(sc.name);if(sc.scholarship)txt+=` <span class="scholarship-tag">${sc.scholarship}</span>`;cells+=`<td>${txt}</td>`;}
+      else cells+=`<td style="color:#ddd">—</td>`;
     }
-    tr.innerHTML=cells;
-    tb3.appendChild(tr);
+    tr.innerHTML=cells;tb3.appendChild(tr);
   });
   t3.appendChild(tb3);
 
-  // Table 4: school list
   const schoolMap={};
   studentList.forEach(s=>{s.schools.forEach(sc=>{if(!schoolMap[sc.name])schoolMap[sc.name]=[];schoolMap[sc.name].push(s.name);});});
   const schoolEntries=Object.entries(schoolMap).map(([name,studs])=>({name,students:studs,rank:getRank(name)}));
   schoolEntries.sort((a,b)=>{const ra=parseInt(a.rank)||9999;const rb=parseInt(b.rank)||9999;return ra-rb||a.name.localeCompare(b.name);});
-
   const t4=document.getElementById('table-4');
   t4.innerHTML='<thead><tr><th style="width:40px">排名</th><th style="width:220px">學校</th><th style="width:50px">人數</th><th>錄取學生</th></tr></thead>';
   const tb4=document.createElement('tbody');
