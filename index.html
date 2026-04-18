@@ -1,319 +1,109 @@
-<!DOCTYPE html>
-<html lang="zh-TW">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>錄取榜單工具</title>
-<style>
-*{box-sizing:border-box;margin:0;padding:0;}
-body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f5f5f3;color:#1a1a1a;padding:2rem 1rem;}
-.wrap{max-width:720px;margin:0 auto;}
-h1{font-size:20px;font-weight:500;margin-bottom:1.5rem;color:#1a1a1a;}
-.card{background:#fff;border:0.5px solid rgba(0,0,0,0.12);border-radius:12px;padding:1.25rem;margin-bottom:1rem;}
-label{font-size:12px;color:#666;display:block;margin-bottom:4px;}
-input,select{width:100%;padding:7px 10px;font-size:14px;border:0.5px solid rgba(0,0,0,0.2);border-radius:8px;background:#fff;color:#1a1a1a;outline:none;}
-input:focus,select:focus{border-color:rgba(0,0,0,0.4);}
-.btn{padding:8px 16px;border:0.5px solid rgba(0,0,0,0.2);border-radius:8px;background:transparent;color:#1a1a1a;cursor:pointer;font-size:13px;}
-.btn:hover{background:#f0f0ee;}
-.btn-primary{background:#1a1a1a;color:#fff;border-color:#1a1a1a;}
-.btn-primary:hover{opacity:0.85;}
-.btn-small{padding:4px 10px;font-size:12px;}
-.section-title{font-size:16px;font-weight:500;color:#1a1a1a;margin-bottom:1rem;}
-.tab-bar{display:flex;gap:4px;border-bottom:0.5px solid rgba(0,0,0,0.12);margin-bottom:1rem;}
-.tab{padding:8px 14px;font-size:13px;cursor:pointer;border:none;background:none;color:#888;border-bottom:2px solid transparent;margin-bottom:-0.5px;}
-.tab.active{color:#1a1a1a;border-bottom-color:#1a1a1a;font-weight:500;}
-.hidden{display:none;}
-.output-table{width:100%;border-collapse:collapse;font-size:13px;table-layout:fixed;}
-.output-table th{text-align:left;padding:8px 10px;font-size:12px;font-weight:500;color:#888;border-bottom:0.5px solid rgba(0,0,0,0.1);}
-.output-table td{padding:8px 10px;border-bottom:0.5px solid rgba(0,0,0,0.08);color:#1a1a1a;vertical-align:top;word-break:break-word;}
-.output-table tr:last-child td{border-bottom:none;}
-.count-badge{display:inline-block;background:#f0f0ee;border-radius:999px;padding:1px 8px;font-size:11px;color:#666;margin-left:4px;}
-.scholarship-tag{display:inline-block;background:#e8f0fe;color:#1a56db;border-radius:6px;padding:1px 6px;font-size:11px;margin-left:4px;}
-.mode-bar{display:flex;gap:8px;margin-bottom:1.5rem;}
-.mode-btn{flex:1;padding:12px;border:0.5px solid rgba(0,0,0,0.2);border-radius:12px;background:transparent;color:#1a1a1a;cursor:pointer;font-size:14px;font-weight:500;text-align:center;}
-.mode-btn:hover{background:#f0f0ee;}
-.mode-btn.active{border-color:#1a1a1a;background:#1a1a1a;color:#fff;}
-.school-row{display:grid;grid-template-columns:1fr 150px auto;gap:8px;align-items:end;margin-bottom:8px;}
-.remove-btn{color:#aaa;cursor:pointer;background:none;border:0.5px solid rgba(0,0,0,0.15);border-radius:8px;font-size:14px;padding:6px 10px;}
-.remove-btn:hover{color:#666;}
-.status-msg{font-size:13px;padding:8px 12px;border-radius:8px;margin-top:8px;}
-.status-ok{background:#ecfdf5;color:#065f46;}
-.status-err{background:#fef2f2;color:#991b1b;}
-.status-loading{background:#f5f5f3;color:#666;}
-.info-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:1rem 0;}
-.info-card{background:#f5f5f3;border-radius:8px;padding:10px 14px;}
-.info-label{font-size:11px;color:#888;margin-bottom:4px;}
-.info-value{font-size:15px;font-weight:500;color:#1a1a1a;}
-.loading-spinner{display:inline-block;width:14px;height:14px;border:2px solid #ddd;border-top-color:#1a1a1a;border-radius:50%;animation:spin 0.7s linear infinite;margin-right:6px;vertical-align:middle;}
-@keyframes spin{to{transform:rotate(360deg);}}
-</style>
-</head>
-<body>
-<div class="wrap">
-<h1>錄取榜單工具</h1>
+const SHEET_ID = '1S5bNJtaEJej2YnFwkYG0X9p2zXh395njUASfQaIn5O4';
+const ADMIT_SHEET = '錄取資料';
+const STUDENT_SHEET = '學生名單';
+const SCHOOL_SHEET = '學校清單';
+const ABBR_SHEET = '學校簡稱';
 
-<div class="mode-bar">
-  <button class="mode-btn active" onclick="switchMode('input')" id="mode-input">填入模式（同事用）</button>
-  <button class="mode-btn" onclick="switchMode('report')" id="mode-report">榜單模式（我用）</button>
-</div>
-
-<div id="input-mode">
-  <div class="card" id="loading-card">
-    <div style="font-size:13px;color:#666"><span class="loading-spinner"></span>載入學生與學校資料中...</div>
-  </div>
-  <div id="input-form" class="hidden">
-    <div class="card">
-      <div class="section-title">填入錄取結果</div>
-      <div style="margin-bottom:1rem;max-width:200px;">
-        <label>填入者姓名</label>
-        <input id="filled-by" placeholder="請輸入你的名字">
-      </div>
-      <div style="margin-bottom:1rem;">
-        <label>選擇學生</label>
-        <select id="student-sel" onchange="onStudentSelect()" style="max-width:250px;">
-          <option value="">選擇學生...</option>
-        </select>
-      </div>
-      <div id="student-info" class="hidden">
-        <div class="info-grid">
-          <div class="info-card"><div class="info-label">GPA</div><div class="info-value" id="info-gpa">—</div></div>
-          <div class="info-card"><div class="info-label">SAT</div><div class="info-value" id="info-sat">—</div></div>
-          <div class="info-card"><div class="info-label">English</div><div class="info-value" id="info-eng">—</div></div>
-        </div>
-      </div>
-      <div style="margin-bottom:0.5rem;display:flex;justify-content:space-between;align-items:center;margin-top:0.5rem;">
-        <label style="margin:0">錄取學校</label>
-        <button class="btn btn-small" onclick="addSchoolRow()">+ 新增學校</button>
-      </div>
-      <div id="schools-container"></div>
-      <div style="margin-top:1rem;display:flex;gap:8px;align-items:center;">
-        <button class="btn btn-primary" onclick="submitEntries()">送出</button>
-        <div id="submit-status"></div>
-      </div>
-    </div>
-  </div>
-</div>
-
-<div id="report-mode" class="hidden">
-  <div class="card">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;">
-      <div class="section-title" style="margin:0">讀取最新資料</div>
-      <button class="btn btn-primary" onclick="loadReportData()">讀取 Google Sheet</button>
-    </div>
-    <div id="report-status" style="font-size:13px;color:#888">按右上角按鈕讀取最新資料</div>
-  </div>
-  <div id="output-section" class="hidden">
-    <div class="tab-bar">
-      <button class="tab active" onclick="switchTab(0)">學生榜單（簡潔）</button>
-      <button class="tab" onclick="switchTab(1)">學生榜單（含獎學金）</button>
-      <button class="tab" onclick="switchTab(2)">學校榜單</button>
-    </div>
-    <div id="tab-0" class="card">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
-        <span style="font-size:12px;color:#888">學生榜單（簡潔）</span>
-        <button class="btn btn-small" onclick="copyTable(0)">複製</button>
-      </div>
-      <table class="output-table" id="table-0"></table>
-    </div>
-    <div id="tab-1" class="card hidden">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
-        <span style="font-size:12px;color:#888">學生榜單（含獎學金）</span>
-        <button class="btn btn-small" onclick="copyTable(1)">複製</button>
-      </div>
-      <table class="output-table" id="table-1"></table>
-    </div>
-    <div id="tab-2" class="card hidden">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
-        <span style="font-size:12px;color:#888">學校榜單</span>
-        <button class="btn btn-small" onclick="copyTable(2)">複製</button>
-      </div>
-      <table class="output-table" id="table-2"></table>
-    </div>
-  </div>
-</div>
-</div>
-
-<script>
-const API_URL='https://script.google.com/macros/s/AKfycbx58PF60GOnl3WNVrskGm5DoABwIupYUX0DoIo3BFB09WZdqJB50bgqGhq7NFZ32Q/exec';
-let students=[];
-let schools=[];
-let schoolRowCount=0;
-
-async function init(){
-  try{
-    const [sRes,scRes]=await Promise.all([
-      fetch(API_URL+'?action=getStudents'),
-      fetch(API_URL+'?action=getSchools')
+function doPost(e) {
+  try {
+    const data = JSON.parse(e.postData.contents);
+    const ss = SpreadsheetApp.openById(SHEET_ID);
+    let sheet = ss.getSheetByName(ADMIT_SHEET);
+    if (!sheet) {
+      sheet = ss.insertSheet(ADMIT_SHEET);
+      sheet.appendRow(['學生姓名','學校','獎學金','填入時間','填入者']);
+    }
+    sheet.appendRow([
+      data.studentName,
+      data.schoolName,
+      data.scholarship || '',
+      new Date().toLocaleString('zh-TW'),
+      data.filledBy || ''
     ]);
-    const sData=await sRes.json();
-    const scData=await scRes.json();
-    students=sData.students||[];
-    schools=scData.schools||[];
-    const sel=document.getElementById('student-sel');
-    students.forEach(s=>{const o=document.createElement('option');o.value=s.name;o.textContent=s.name;sel.appendChild(o);});
-    document.getElementById('loading-card').classList.add('hidden');
-    document.getElementById('input-form').classList.remove('hidden');
-    addSchoolRow();
-  }catch(e){
-    document.getElementById('loading-card').innerHTML='<div style="font-size:13px;color:#991b1b">載入失敗，請重新整理頁面</div>';
+    return buildResponse({status:'ok'});
+  } catch(err) {
+    return buildResponse({status:'error', message: err.toString()});
   }
 }
 
-function onStudentSelect(){
-  const name=document.getElementById('student-sel').value;
-  const student=students.find(s=>s.name===name);
-  if(!student){document.getElementById('student-info').classList.add('hidden');return;}
-  document.getElementById('info-gpa').textContent=student.gpa||'—';
-  document.getElementById('info-sat').textContent=student.sat||'—';
-  document.getElementById('info-eng').textContent=student.english||'—';
-  document.getElementById('student-info').classList.remove('hidden');
-}
+function doGet(e) {
+  try {
+    const action = e.parameter.action || 'getAdmissions';
+    const ss = SpreadsheetApp.openById(SHEET_ID);
 
-function buildSchoolSelect(){
-  const sel=document.createElement('select');
-  const d=document.createElement('option');d.value='';d.textContent='選擇學校...';sel.appendChild(d);
-  schools.forEach(s=>{const o=document.createElement('option');o.value=s.name;o.textContent=s.rank?`#${s.rank} ${s.name}`:s.name;sel.appendChild(o);});
-  const c=document.createElement('option');c.value='__custom__';c.textContent='其他（手動輸入）';sel.appendChild(c);
-  return sel;
-}
+    if (action === 'getStudents') {
+      const sheet = ss.getSheetByName(STUDENT_SHEET);
+      if (!sheet) return buildResponse({students:[]});
+      const rows = sheet.getDataRange().getValues();
+      const headers = rows[0].map(h => h.toString().trim().toLowerCase());
+      const nameIdx = headers.findIndex(h => /studentname|姓名/i.test(h));
+      const gpaIdx = headers.findIndex(h => /gpa/i.test(h));
+      const satIdx = headers.findIndex(h => /sat/i.test(h));
+      const engIdx = headers.findIndex(h => /english|toefl|englishproficiency/i.test(h));
+      const students = rows.slice(1)
+        .filter(r => r[nameIdx] && r[nameIdx].toString().trim() !== '')
+        .map(r => ({
+          name: r[nameIdx].toString().trim(),
+          gpa: gpaIdx >= 0 ? r[gpaIdx].toString() : '',
+          sat: satIdx >= 0 ? r[satIdx].toString() : '',
+          english: engIdx >= 0 ? r[engIdx].toString() : ''
+        }));
+      return buildResponse({students});
+    }
 
-function addSchoolRow(){
-  schoolRowCount++;
-  const id=schoolRowCount;
-  const container=document.getElementById('schools-container');
-  const row=document.createElement('div');
-  row.className='school-row';row.id=`srow-${id}`;
-  const schoolWrap=document.createElement('div');
-  const sel=buildSchoolSelect();sel.id=`ssel-${id}`;
-  const customInput=document.createElement('input');
-  customInput.placeholder='輸入學校名稱';customInput.id=`scustom-${id}`;customInput.style.display='none';
-  sel.addEventListener('change',()=>{
-    if(sel.value==='__custom__'){sel.style.display='none';customInput.style.display='';}
-    else{sel.style.display='';customInput.style.display='none';}
-  });
-  schoolWrap.appendChild(sel);schoolWrap.appendChild(customInput);
-  const scholarWrap=document.createElement('div');
-  const scholarInput=document.createElement('input');
-  scholarInput.placeholder='獎學金（選填）';scholarInput.id=`sscholar-${id}`;
-  scholarWrap.appendChild(scholarInput);
-  const removeBtn=document.createElement('button');
-  removeBtn.className='remove-btn';removeBtn.textContent='×';
-  removeBtn.onclick=()=>row.remove();
-  row.appendChild(schoolWrap);row.appendChild(scholarWrap);row.appendChild(removeBtn);
-  container.appendChild(row);
-}
+    if (action === 'getSchools') {
+      const sheet = ss.getSheetByName(SCHOOL_SHEET);
+      if (!sheet) return buildResponse({schools:[]});
+      const rows = sheet.getDataRange().getValues();
+      const headers = rows[0].map(h => h.toString().trim().toLowerCase());
+      const rankIdx = headers.findIndex(h => /rank/i.test(h));
+      const nameIdx = headers.findIndex(h => /name|學校/i.test(h));
+      const schools = rows.slice(1)
+        .filter(r => r[nameIdx] && r[nameIdx].toString().trim() !== '')
+        .map(r => ({
+          rank: rankIdx >= 0 ? r[rankIdx].toString() : '',
+          name: r[nameIdx].toString().trim()
+        }));
+      return buildResponse({schools});
+    }
 
-async function submitEntries(){
-  const filledBy=document.getElementById('filled-by').value.trim();
-  const studentName=document.getElementById('student-sel').value;
-  if(!studentName){setStatus('submit-status','請選擇學生','err');return;}
-  if(!filledBy){setStatus('submit-status','請填入你的名字','err');return;}
-  const rows=document.querySelectorAll('[id^="srow-"]');
-  const entries=[];
-  rows.forEach(row=>{
-    const id=row.id.replace('srow-','');
-    const sel=document.getElementById(`ssel-${id}`);
-    const custom=document.getElementById(`scustom-${id}`);
-    const scholar=document.getElementById(`sscholar-${id}`)?.value?.trim()||'';
-    let schoolName=sel&&sel.value==='__custom__'?custom.value.trim():sel?sel.value:'';
-    if(schoolName)entries.push({studentName,schoolName,scholarship:scholar,filledBy});
-  });
-  if(!entries.length){setStatus('submit-status','請至少填入一間學校','err');return;}
-  setStatus('submit-status','送出中...','loading');
-  let ok=0;
-  for(const entry of entries){
-    try{await fetch(API_URL,{method:'POST',body:JSON.stringify(entry)});ok++;}catch(e){}
-  }
-  if(ok===entries.length){
-    setStatus('submit-status',`已成功送出 ${ok} 筆資料`,'ok');
-    document.getElementById('schools-container').innerHTML='';
-    document.getElementById('student-sel').value='';
-    document.getElementById('student-info').classList.add('hidden');
-    schoolRowCount=0;addSchoolRow();
-  }else{
-    setStatus('submit-status','部分資料送出失敗，請再試一次','err');
-  }
-}
+    if (action === 'getAbbreviations') {
+      const sheet = ss.getSheetByName(ABBR_SHEET);
+      if (!sheet) return buildResponse({abbreviations:[]});
+      const rows = sheet.getDataRange().getValues();
+      const headers = rows[0].map(h => h.toString().trim());
+      const nameIdx = headers.findIndex(h => /學校名稱|name/i.test(h));
+      const abbrIdx = headers.findIndex(h => /簡稱|abbr/i.test(h));
+      const abbreviations = rows.slice(1)
+        .filter(r => r[nameIdx] && r[abbrIdx])
+        .map(r => ({
+          name: r[nameIdx].toString().trim(),
+          abbr: r[abbrIdx].toString().trim()
+        }));
+      return buildResponse({abbreviations});
+    }
 
-function setStatus(id,msg,type){
-  const el=document.getElementById(id);el.textContent=msg;el.className='status-msg status-'+type;
-}
+    if (action === 'getAdmissions') {
+      const sheet = ss.getSheetByName(ADMIT_SHEET);
+      if (!sheet) return buildResponse({data:[]});
+      const rows = sheet.getDataRange().getValues();
+      const headers = rows[0];
+      const data = rows.slice(1).map(row => {
+        const obj = {};
+        headers.forEach((h, i) => obj[h] = row[i] ? row[i].toString() : '');
+        return obj;
+      });
+      return buildResponse({data});
+    }
 
-function switchMode(mode){
-  document.getElementById('input-mode').classList.toggle('hidden',mode!=='input');
-  document.getElementById('report-mode').classList.toggle('hidden',mode!=='report');
-  document.getElementById('mode-input').classList.toggle('active',mode==='input');
-  document.getElementById('mode-report').classList.toggle('active',mode==='report');
-}
-
-async function loadReportData(){
-  document.getElementById('report-status').innerHTML='<span class="loading-spinner"></span>讀取中...';
-  document.getElementById('report-status').className='status-msg status-loading';
-  try{
-    const res=await fetch(API_URL+'?action=getAdmissions');
-    const json=await res.json();
-    const data=json.data||[];
-    if(!data.length){setStatus('report-status','目前還沒有資料','loading');return;}
-    buildReports(data);
-    document.getElementById('report-status').textContent=`已讀取 ${data.length} 筆資料`;
-    document.getElementById('report-status').className='status-msg status-ok';
-  }catch(e){
-    setStatus('report-status','讀取失敗，請確認網路連線','err');
+    return buildResponse({error:'unknown action'});
+  } catch(err) {
+    return buildResponse({error: err.toString()});
   }
 }
 
-function getRank(name){const f=schools.find(s=>s.name===name);return f?f.rank:null;}
-
-function buildReports(data){
-  const studentMap={};
-  data.forEach(row=>{
-    const name=row['學生姓名'];const school=row['學校'];const scholar=row['獎學金']||'';
-    if(!name||!school)return;
-    if(!studentMap[name])studentMap[name]=[];
-    studentMap[name].push({name:school,scholarship:scholar});
-  });
-  const studentList=Object.entries(studentMap).map(([name,schools])=>({name,schools}));
-
-  const t0=document.getElementById('table-0');
-  t0.innerHTML='<thead><tr><th style="width:120px">學生</th><th style="width:50px">數量</th><th>錄取學校</th></tr></thead>';
-  const tb0=document.createElement('tbody');
-  studentList.forEach(s=>{const tr=document.createElement('tr');tr.innerHTML=`<td style="font-weight:500">${s.name}</td><td><span class="count-badge">${s.schools.length}</span></td><td>${s.schools.map(sc=>sc.name).join('、')}</td>`;tb0.appendChild(tr);});
-  t0.appendChild(tb0);
-
-  const t1=document.getElementById('table-1');
-  t1.innerHTML='<thead><tr><th style="width:120px">學生</th><th style="width:50px">數量</th><th>錄取學校（含獎學金）</th></tr></thead>';
-  const tb1=document.createElement('tbody');
-  studentList.forEach(s=>{
-    const str=s.schools.map(sc=>{let r=sc.name;if(sc.scholarship)r+=` <span class="scholarship-tag">${sc.scholarship}</span>`;return r;}).join('　');
-    const tr=document.createElement('tr');tr.innerHTML=`<td style="font-weight:500">${s.name}</td><td><span class="count-badge">${s.schools.length}</span></td><td>${str}</td>`;tb1.appendChild(tr);
-  });
-  t1.appendChild(tb1);
-
-  const schoolMap={};
-  studentList.forEach(s=>{s.schools.forEach(sc=>{if(!schoolMap[sc.name])schoolMap[sc.name]=[];schoolMap[sc.name].push(s.name);});});
-  const schoolEntries=Object.entries(schoolMap).map(([name,studs])=>({name,students:studs,rank:getRank(name)}));
-  schoolEntries.sort((a,b)=>{const ra=parseInt(a.rank)||9999;const rb=parseInt(b.rank)||9999;return ra-rb||a.name.localeCompare(b.name);});
-
-  const t2=document.getElementById('table-2');
-  t2.innerHTML='<thead><tr><th style="width:40px">排名</th><th style="width:220px">學校</th><th style="width:50px">人數</th><th>錄取學生</th></tr></thead>';
-  const tb2=document.createElement('tbody');
-  schoolEntries.forEach(e=>{const tr=document.createElement('tr');tr.innerHTML=`<td style="color:#888">${e.rank?'#'+e.rank:'—'}</td><td style="font-weight:500">${e.name}</td><td><span class="count-badge">${e.students.length}</span></td><td>${e.students.join('、')}</td>`;tb2.appendChild(tr);});
-  t2.appendChild(tb2);
-  document.getElementById('output-section').classList.remove('hidden');
+function buildResponse(obj) {
+  const output = ContentService.createTextOutput(JSON.stringify(obj));
+  output.setMimeType(ContentService.MimeType.JSON);
+  return output;
 }
-
-function switchTab(idx){
-  [0,1,2].forEach(i=>{document.getElementById(`tab-${i}`).classList.toggle('hidden',i!==idx);document.querySelectorAll('.tab')[i].classList.toggle('active',i===idx);});
-}
-
-function copyTable(idx){
-  const table=document.getElementById(`table-${idx}`);
-  const rows=table.querySelectorAll('tr');
-  const text=Array.from(rows).map(row=>Array.from(row.querySelectorAll('th,td')).map(cell=>cell.innerText).join('\t')).join('\n');
-  navigator.clipboard.writeText(text).then(()=>alert('已複製到剪貼簿'));
-}
-
-init();
-</script>
-</body>
-</html>
