@@ -122,7 +122,8 @@ input:focus,select:focus{border-color:rgba(0,0,0,0.4);}
       <button class="tab active" onclick="switchTab(0)">學生榜單（簡潔）</button>
       <button class="tab" onclick="switchTab(1)">學生榜單（含獎學金）</button>
       <button class="tab" onclick="switchTab(2)">學生榜單（簡稱）</button>
-      <button class="tab" onclick="switchTab(3)">學校榜單</button>
+      <button class="tab" onclick="switchTab(3)">學生榜單（分欄）</button>
+      <button class="tab" onclick="switchTab(4)">學校榜單</button>
     </div>
     <div id="tab-0" class="card">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
@@ -147,10 +148,18 @@ input:focus,select:focus{border-color:rgba(0,0,0,0.4);}
     </div>
     <div id="tab-3" class="card hidden">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
-        <span style="font-size:12px;color:#888">學校榜單</span>
+        <span style="font-size:12px;color:#888">學生榜單（簡稱＋分欄）</span>
         <button class="btn btn-small" onclick="copyTable(3)">複製</button>
       </div>
-      <table class="output-table" id="table-3"></table>
+      <div style="font-size:12px;color:#888;margin-bottom:8px;">每間學校各佔一欄，複製後可直接貼到 Excel 或 Google Sheet</div>
+      <table class="output-table" id="table-3" style="table-layout:auto;"></table>
+    </div>
+    <div id="tab-4" class="card hidden">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+        <span style="font-size:12px;color:#888">學校榜單</span>
+        <button class="btn btn-small" onclick="copyTable(4)">複製</button>
+      </div>
+      <table class="output-table" id="table-4"></table>
     </div>
   </div>
 </div>
@@ -381,23 +390,49 @@ function buildReports(data){
   });
   t2.appendChild(tb2);
 
-  // Table 3: school list
+  // Table 3: abbreviated columns format
+  const maxSchools=Math.max(...studentList.map(s=>s.schools.length));
+  const t3=document.getElementById('table-3');
+  let t3head='<thead><tr><th style="min-width:100px">學生</th><th style="min-width:40px">數量</th>';
+  for(let i=1;i<=maxSchools;i++)t3head+=`<th style="min-width:120px">學校${i}</th>`;
+  t3head+='</tr></thead>';
+  t3.innerHTML=t3head;
+  const tb3=document.createElement('tbody');
+  studentList.forEach(s=>{
+    const tr=document.createElement('tr');
+    let cells=`<td style="font-weight:500">${s.name}</td><td><span class="count-badge">${s.schools.length}</span></td>`;
+    for(let i=0;i<maxSchools;i++){
+      const sc=s.schools[i];
+      if(sc){
+        let txt=getAbbr(sc.name);
+        if(sc.scholarship)txt+=` <span class="scholarship-tag">${sc.scholarship}</span>`;
+        cells+=`<td>${txt}</td>`;
+      } else {
+        cells+=`<td style="color:#ddd">—</td>`;
+      }
+    }
+    tr.innerHTML=cells;
+    tb3.appendChild(tr);
+  });
+  t3.appendChild(tb3);
+
+  // Table 4: school list
   const schoolMap={};
   studentList.forEach(s=>{s.schools.forEach(sc=>{if(!schoolMap[sc.name])schoolMap[sc.name]=[];schoolMap[sc.name].push(s.name);});});
   const schoolEntries=Object.entries(schoolMap).map(([name,studs])=>({name,students:studs,rank:getRank(name)}));
   schoolEntries.sort((a,b)=>{const ra=parseInt(a.rank)||9999;const rb=parseInt(b.rank)||9999;return ra-rb||a.name.localeCompare(b.name);});
 
-  const t3=document.getElementById('table-3');
-  t3.innerHTML='<thead><tr><th style="width:40px">排名</th><th style="width:220px">學校</th><th style="width:50px">人數</th><th>錄取學生</th></tr></thead>';
-  const tb3=document.createElement('tbody');
-  schoolEntries.forEach(e=>{const tr=document.createElement('tr');tr.innerHTML=`<td style="color:#888">${e.rank?'#'+e.rank:'—'}</td><td style="font-weight:500">${e.name}</td><td><span class="count-badge">${e.students.length}</span></td><td>${e.students.join('、')}</td>`;tb3.appendChild(tr);});
-  t3.appendChild(tb3);
+  const t4=document.getElementById('table-4');
+  t4.innerHTML='<thead><tr><th style="width:40px">排名</th><th style="width:220px">學校</th><th style="width:50px">人數</th><th>錄取學生</th></tr></thead>';
+  const tb4=document.createElement('tbody');
+  schoolEntries.forEach(e=>{const tr=document.createElement('tr');tr.innerHTML=`<td style="color:#888">${e.rank?'#'+e.rank:'—'}</td><td style="font-weight:500">${e.name}</td><td><span class="count-badge">${e.students.length}</span></td><td>${e.students.join('、')}</td>`;tb4.appendChild(tr);});
+  t4.appendChild(tb4);
 
   document.getElementById('output-section').classList.remove('hidden');
 }
 
 function switchTab(idx){
-  [0,1,2,3].forEach(i=>{
+  [0,1,2,3,4].forEach(i=>{
     document.getElementById(`tab-${i}`).classList.toggle('hidden',i!==idx);
     document.querySelectorAll('.tab')[i].classList.toggle('active',i===idx);
   });
